@@ -1,0 +1,6 @@
+{
+  "name": "Love Birds",
+  "description": "A private, real-time sanctuary for long-distance couples with pairing codes, interactive art messaging, shared photo albums, synced calendars, and love notes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
