@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Heart,
   Copy,
@@ -6,7 +6,6 @@ import {
   Sparkles,
   Link2,
   Users,
-  Compass,
   ArrowRight,
   ShieldCheck,
 } from 'lucide-react';
@@ -20,21 +19,45 @@ interface PairingModalProps {
 const BIRD_AVATARS = ['🕊️', '🦢', '🦜', '🦩', '🐧', '🦉', '🐣', '🐥'];
 
 export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode }) => {
-  const [mode, setMode] = useState<'create' | 'join'>('create');
+  // If initialCode came in from URL query (?nest=...), default to 'join' mode
+  const [mode, setMode] = useState<'create' | 'join'>(initialCode ? 'join' : 'create');
   const [pairCode, setPairCode] = useState(initialCode || '');
   const [userName, setUserName] = useState('');
   const [avatar, setAvatar] = useState('🕊️');
   const [city, setCity] = useState('');
   const [copied, setCopied] = useState(false);
+  const [partnerFound, setPartnerFound] = useState<string | null>(null);
 
-  // Generate a random pair code on mount if in create mode
-  const [generatedCode, setGeneratedCode] = useState(() => {
-    if (initialCode) return initialCode;
+  // Random code generated for create mode
+  const [generatedCode] = useState(() => {
     const prefixes = ['BIRD', 'DOVE', 'HEART', 'LOVE', 'SWEET'];
     const randPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
     const randNum = Math.floor(1000 + Math.random() * 9000);
     return `${randPrefix}-${randNum}`;
   });
+
+  // Check if room exists and has partner info
+  useEffect(() => {
+    const targetCode = (mode === 'join' ? pairCode : generatedCode).trim().toUpperCase();
+    if (!targetCode) return;
+
+    let isDisposed = false;
+    fetch(`/api/room/${encodeURIComponent(targetCode)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((room) => {
+        if (!isDisposed && room && room.users && room.users.length > 0) {
+          const names = room.users.map((u: any) => u.name).join(' & ');
+          setPartnerFound(names);
+        } else if (!isDisposed) {
+          setPartnerFound(null);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [pairCode, generatedCode, mode]);
 
   const handleCopyLink = () => {
     const code = mode === 'create' ? generatedCode : pairCode;
@@ -46,12 +69,11 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const finalName = userName.trim() || (mode === 'create' ? 'Love Bird 1' : 'Love Bird 2');
-    const finalCode = mode === 'create' ? generatedCode : pairCode.trim().toUpperCase();
-
+    const finalCode = (mode === 'create' ? generatedCode : pairCode).trim().toUpperCase();
     if (!finalCode) return;
 
-    // Detect browser timezone
+    const finalName = userName.trim() || (mode === 'create' ? 'Love Bird 1' : 'Love Bird 2');
+
     let detectedTz = 'UTC';
     try {
       detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -99,6 +121,22 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
           </p>
         </div>
 
+        {/* Invited banner if initialCode is present */}
+        {initialCode && (
+          <div className="p-3 bg-pink-50 border border-pink-200 rounded-2xl text-xs text-pink-800 flex items-center gap-2">
+            <span className="text-lg">💌</span>
+            <div>
+              <span className="font-bold">You were invited to Nest: </span>
+              <span className="font-mono font-bold text-pink-900">{initialCode}</span>
+              {partnerFound && (
+                <span className="block text-[11px] text-pink-600">
+                  Waiting for you: <span className="font-semibold">{partnerFound}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Tab switch */}
         <div className="grid grid-cols-2 p-1 bg-rose-50/80 rounded-2xl border border-rose-100">
           <button
@@ -139,7 +177,7 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
                   onClick={handleCopyLink}
                   className="flex items-center gap-1 px-2.5 py-1 text-xs font-sans font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   {copied ? 'Copied Link!' : 'Share Link'}
                 </button>
               </div>
@@ -149,7 +187,14 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
             </div>
           ) : (
             <div>
-              <label className="text-xs font-semibold text-slate-700">Enter Partner's Nest Code</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700">Enter Partner's Nest Code</label>
+                {partnerFound && (
+                  <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Nest active ({partnerFound})
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 required
@@ -229,7 +274,7 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
             <span>Quick Start with Demo Couple ("Maya & Alex")</span>
           </button>
           <p className="text-[11px] text-slate-400 text-center">
-            Tip: Open this app in two side-by-side tabs to watch real-time sketches & messages sync live!
+            Tip: Open this app in two side-by-side tabs or devices to watch real-time sketches & messages sync live!
           </p>
         </div>
       </div>

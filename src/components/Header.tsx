@@ -104,26 +104,27 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Nest Code & Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Pair Code Badge */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-rose-50 border border-rose-200/80 rounded-xl text-xs font-mono font-bold text-rose-800">
-            <span className="text-slate-400 font-sans font-medium text-[11px]">Nest:</span>
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 border border-rose-200/80 rounded-xl text-xs font-mono font-bold text-rose-800">
+            <span className="text-slate-400 font-sans font-medium text-[11px] hidden sm:inline">Nest:</span>
             <span>{currentCode}</span>
             <button
-              onClick={handleCopyCode}
-              title="Copy Nest Code"
-              className="p-1 hover:bg-rose-100 rounded-md transition-colors cursor-pointer text-rose-600"
+              onClick={handleCopyLink}
+              title="Copy Shareable Link"
+              className="p-1 hover:bg-rose-100 rounded-md transition-colors cursor-pointer text-rose-600 flex items-center gap-1 text-[11px] font-sans"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span className="hidden md:inline">{copied ? 'Link Copied!' : 'Copy Link'}</span>
             </button>
           </div>
 
-          {/* Test in 2nd tab */}
+          {/* Test in 2nd tab / window */}
           <button
             onClick={openPartnerWindow}
             title="Open partner view in new window to test real-time collaboration"
-            className="hidden md:flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 rounded-xl border border-rose-200 transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-rose-600 bg-rose-50/80 hover:bg-rose-100 rounded-xl border border-rose-200 transition-colors cursor-pointer"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            <span>2nd Tab Demo</span>
+            <span className="hidden sm:inline">2nd Window</span>
           </button>
 
           {/* Mute button */}
@@ -145,6 +146,33 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Partner waiting notice banner if partner not joined yet */}
+      {!partnerUser && (
+        <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 px-4 py-1.5 border-t border-rose-100 text-xs text-rose-900 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <span className="animate-pulse">💌</span>
+            <span>
+              Your partner hasn't joined this nest yet! Give them code <strong className="font-mono bg-white px-1.5 py-0.5 rounded-md border border-rose-200">{currentCode}</strong> or share the link.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyLink}
+              className="text-xs font-bold text-rose-600 hover:underline cursor-pointer flex items-center gap-1"
+            >
+              {copied ? '✅ Link Copied!' : '📋 Copy Invite Link'}
+            </button>
+            <span className="text-slate-300">•</span>
+            <button
+              onClick={openPartnerWindow}
+              className="text-xs font-bold text-slate-600 hover:text-rose-600 cursor-pointer flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" /> Test in 2nd Tab
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Primary Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none border-t border-rose-50 py-1.5">

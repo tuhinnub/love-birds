@@ -266,6 +266,18 @@ function getOrCreateRoom(rawCode: string): RoomData {
 }
 
 const app = express();
+
+// CORS setup for mobile browsers and external partner phones
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -283,6 +295,287 @@ app.get('/api/room/:code', (req, res) => {
   const code = req.params.code.trim().toUpperCase();
   const room = getOrCreateRoom(code);
   res.json(room);
+});
+
+// Dual-sync polling endpoint
+app.get('/api/room/:code/sync', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const userId = req.query.userId as string | undefined;
+  const room = getOrCreateRoom(code);
+
+  if (userId) {
+    const user = room.users.find((u) => u.id === userId);
+    if (user) {
+      user.isOnline = true;
+      user.lastSeen = Date.now();
+    }
+  }
+
+  res.json(room);
+});
+
+// REST endpoint: Join / Update Profile
+app.post('/api/room/:code/join', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const user: UserProfile = req.body.user;
+  if (!user || !user.id) return res.status(400).json({ error: 'Missing user' });
+
+  const room = getOrCreateRoom(code);
+  const existingIdx = room.users.findIndex((u) => u.id === user.id);
+  const updatedUser: UserProfile = { ...user, isOnline: true, lastSeen: Date.now() };
+
+  if (existingIdx >= 0) {
+    room.users[existingIdx] = { ...room.users[existingIdx], ...updatedUser };
+  } else {
+    room.users.push(updatedUser);
+  }
+
+  scheduleSave();
+  broadcastToAllInRoom(code, {
+    type: 'user_presence',
+    user: updatedUser,
+    users: room.users,
+  });
+
+  res.json({ success: true, room });
+});
+
+// REST endpoint: Post Chat Message
+app.post('/api/room/:code/message', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const message: ChatMessage = req.body.message;
+  if (!message || !message.id) return res.status(400).json({ error: 'Invalid message' });
+
+  const room = getOrCreateRoom(code);
+  if (!room.messages.some((m) => m.id === message.id)) {
+    room.messages.push(message);
+    scheduleSave();
+  }
+
+  broadcastToAllInRoom(code, { type: 'new_message', message });
+  res.json({ success: true, message });
+});
+
+// REST endpoint: Reaction
+app.post('/api/room/:code/reaction', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const { messageId, emoji, userId } = req.body;
+  const room = getOrCreateRoom(code);
+  const target = room.messages.find((m) => m.id === messageId);
+
+  if (target) {
+    target.reactions = target.reactions || {};
+    const list = target.reactions[emoji] || [];
+    if (list.includes(userId)) {
+      target.reactions[emoji] = list.filter((id) => id !== userId);
+      if (target.reactions[emoji].length === 0) {
+        delete target.reactions[emoji];
+      }
+    } else {
+      target.reactions[emoji] = [...list, userId];
+    }
+    scheduleSave();
+    broadcastToAllInRoom(code, { type: 'message_updated', message: target });
+  }
+
+  res.json({ success: true, target });
+});
+
+// REST endpoint: Canvas stroke
+app.post('/api/room/:code/stroke', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const stroke: CanvasStroke = req.body.stroke;
+  if (!stroke) return res.status(400).json({ error: 'Invalid stroke' });
+
+  const room = getOrCreateRoom(code);
+  room.canvasStrokes.push(stroke);
+  if (room.canvasStrokes.length > 500) {
+    room.canvasStrokes = room.canvasStrokes.slice(-300);
+  }
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'canvas_stroke', stroke });
+  res.json({ success: true });
+});
+
+// REST endpoint: Clear canvas
+app.post('/api/room/:code/clear-canvas', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const room = getOrCreateRoom(code);
+  room.canvasStrokes = [];
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'canvas_cleared' });
+  res.json({ success: true });
+});
+
+// REST endpoint: Poke / Kiss / Hug
+app.post('/api/room/:code/poke', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const { pokeType, senderName, senderId } = req.body;
+  const room = getOrCreateRoom(code);
+
+  const pokeMsg: ChatMessage = {
+    id: `poke-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+    senderId,
+    senderName,
+    type: 'poke',
+    pokeType: pokeType || 'kiss',
+    timestamp: Date.now(),
+  };
+  room.messages.push(pokeMsg);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, {
+    type: 'poke_received',
+    pokeType,
+    senderName,
+    senderId,
+    message: pokeMsg,
+  });
+
+  res.json({ success: true, message: pokeMsg });
+});
+
+// REST endpoint: Add Photo
+app.post('/api/room/:code/photo', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const photo: PhotoItem = req.body.photo;
+  if (!photo) return res.status(400).json({ error: 'Missing photo' });
+
+  const room = getOrCreateRoom(code);
+  room.photos.unshift(photo);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'photo_added', photo });
+  res.json({ success: true, photo });
+});
+
+// REST endpoint: Photo Like
+app.post('/api/room/:code/photo-like', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const { photoId, userId } = req.body;
+  const room = getOrCreateRoom(code);
+  const photo = room.photos.find((p) => p.id === photoId);
+
+  if (photo) {
+    if (photo.likes.includes(userId)) {
+      photo.likes = photo.likes.filter((id) => id !== userId);
+    } else {
+      photo.likes.push(userId);
+    }
+    scheduleSave();
+    broadcastToAllInRoom(code, { type: 'photo_updated', photo });
+  }
+
+  res.json({ success: true, photo });
+});
+
+// REST endpoint: Photo Delete
+app.post('/api/room/:code/photo-delete', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const { photoId } = req.body;
+  const room = getOrCreateRoom(code);
+  room.photos = room.photos.filter((p) => p.id !== photoId);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'photo_deleted', photoId });
+  res.json({ success: true });
+});
+
+// REST endpoint: Add Calendar Event
+app.post('/api/room/:code/event', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const event: CalendarEvent = req.body.event;
+  if (!event) return res.status(400).json({ error: 'Missing event' });
+
+  const room = getOrCreateRoom(code);
+  room.events.push(event);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'event_added', event });
+  res.json({ success: true, event });
+});
+
+// REST endpoint: Delete Calendar Event
+app.post('/api/room/:code/event-delete', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const { eventId } = req.body;
+  const room = getOrCreateRoom(code);
+  room.events = room.events.filter((e) => e.id !== eventId);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'event_deleted', eventId });
+  res.json({ success: true });
+});
+
+// REST endpoint: Add Love Letter
+app.post('/api/room/:code/letter', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const letter: LoveLetter = req.body.letter;
+  if (!letter) return res.status(400).json({ error: 'Missing letter' });
+
+  const room = getOrCreateRoom(code);
+  room.letters.push(letter);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'letter_added', letter });
+  res.json({ success: true, letter });
+});
+
+// REST endpoint: Open Love Letter
+app.post('/api/room/:code/letter-open', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const { letterId } = req.body;
+  const room = getOrCreateRoom(code);
+  const letter = room.letters.find((l) => l.id === letterId);
+
+  if (letter && !letter.isOpened) {
+    letter.isOpened = true;
+    letter.openedAt = new Date().toISOString();
+    scheduleSave();
+    broadcastToAllInRoom(code, { type: 'letter_opened', letter });
+  }
+
+  res.json({ success: true, letter });
+});
+
+// REST endpoint: Add Note
+app.post('/api/room/:code/note', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const note: StickyNote = req.body.note;
+  if (!note) return res.status(400).json({ error: 'Missing note' });
+
+  const room = getOrCreateRoom(code);
+  room.notes.push(note);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'note_added', note });
+  res.json({ success: true, note });
+});
+
+// REST endpoint: Delete Note
+app.post('/api/room/:code/note-delete', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const { noteId } = req.body;
+  const room = getOrCreateRoom(code);
+  room.notes = room.notes.filter((n) => n.id !== noteId);
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'note_deleted', noteId });
+  res.json({ success: true });
+});
+
+// REST endpoint: Update Couple Meta (Countdown, Timezones)
+app.post('/api/room/:code/meta', (req, res) => {
+  const code = req.params.code.trim().toUpperCase();
+  const meta: Partial<CoupleMeta> = req.body.meta;
+  const room = getOrCreateRoom(code);
+  room.coupleMeta = { ...room.coupleMeta, ...meta };
+  scheduleSave();
+
+  broadcastToAllInRoom(code, { type: 'meta_updated', coupleMeta: room.coupleMeta });
+  res.json({ success: true, coupleMeta: room.coupleMeta });
 });
 
 const server = http.createServer(app);
