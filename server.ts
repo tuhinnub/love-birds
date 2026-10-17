@@ -395,6 +395,51 @@ app.get('/api/room/:code', (req, res) => {
   res.json(room);
 });
 
+// Helper to safely register or update a partner in a couple nest without ever kicking the other partner out
+function registerOrUpdateUserInRoom(
+  room: RoomData,
+  user: Partial<UserProfile> & { id: string }
+): UserProfile {
+  const now = Date.now();
+  const cleanName = (user.name || '').trim();
+
+  // Try matching by exact ID or case-insensitive name
+  let targetUser = room.users.find(
+    (u) =>
+      u.id === user.id ||
+      (cleanName && u.name && u.name.trim().toLowerCase() === cleanName.toLowerCase())
+  );
+
+  if (targetUser) {
+    targetUser.id = user.id; // synchronize to latest session ID
+    if (cleanName) targetUser.name = cleanName;
+    if (user.avatar) targetUser.avatar = user.avatar;
+    if (user.city) targetUser.city = user.city;
+    if (user.timezone) targetUser.timezone = user.timezone;
+    targetUser.isOnline = true;
+    targetUser.lastSeen = now;
+  } else {
+    // New user entering this nest - NEVER kick out or overwrite existing users!
+    targetUser = {
+      id: user.id,
+      name: cleanName || (room.users.length === 0 ? 'Love Bird 1' : 'Love Bird 2'),
+      avatar: user.avatar || '🕊️',
+      city: user.city,
+      timezone: user.timezone,
+      isOnline: true,
+      lastSeen: now,
+    };
+    room.users.push(targetUser);
+  }
+
+  // Update presence status dynamically: online if active in last 30s
+  room.users.forEach((u) => {
+    u.isOnline = now - (u.lastSeen || 0) < 30000;
+  });
+
+  return targetUser;
+}
+
 // Dual-sync polling endpoint with live presence calculation and auto-registration
 app.get('/api/room/:code/sync', (req, res) => {
   const userId = req.query.userId as string | undefined;
@@ -404,44 +449,22 @@ app.get('/api/room/:code/sync', (req, res) => {
   const userTimezone = req.query.userTimezone as string | undefined;
 
   const room = getOrCreateRoom(req.params.code);
-  const now = Date.now();
 
   if (userId) {
-    let user = room.users.find((u) => u.id === userId);
-    if (user) {
-      user.isOnline = true;
-      user.lastSeen = now;
-      if (userName) user.name = userName;
-      if (userAvatar) user.avatar = userAvatar;
-      if (userCity) user.city = userCity;
-      if (userTimezone) user.timezone = userTimezone;
-    } else {
-      // Auto-register user in room if not present
-      const newUser: UserProfile = {
-        id: userId,
-        name: userName || (room.users.length === 0 ? 'Love Bird 1' : 'Love Bird 2'),
-        avatar: userAvatar,
-        city: userCity,
-        timezone: userTimezone,
-        isOnline: true,
-        lastSeen: now,
-      };
-
-      if (room.users.length >= 2) {
-        // Replace oldest inactive user
-        room.users.sort((a, b) => (a.lastSeen || 0) - (b.lastSeen || 0));
-        room.users[0] = newUser;
-      } else {
-        room.users.push(newUser);
-      }
-      scheduleSave();
-    }
+    registerOrUpdateUserInRoom(room, {
+      id: userId,
+      name: userName,
+      avatar: userAvatar,
+      city: userCity,
+      timezone: userTimezone,
+    });
+    scheduleSave();
+  } else {
+    const now = Date.now();
+    room.users.forEach((u) => {
+      u.isOnline = now - (u.lastSeen || 0) < 30000;
+    });
   }
-
-  // Update presence status dynamically: online if active in last 25s
-  room.users.forEach((u) => {
-    u.isOnline = now - (u.lastSeen || 0) < 25000;
-  });
 
   res.json(room);
 });
@@ -452,22 +475,7 @@ app.post('/api/room/:code/join', (req, res) => {
   if (!user || !user.id) return res.status(400).json({ error: 'Missing user' });
 
   const room = getOrCreateRoom(req.params.code);
-  const existingIdx = room.users.findIndex((u) => u.id === user.id);
-  const updatedUser: UserProfile = { ...user, isOnline: true, lastSeen: Date.now() };
-
-  if (existingIdx >= 0) {
-    room.users[existingIdx] = { ...room.users[existingIdx], ...updatedUser };
-  } else {
-    if (room.users.length >= 2) {
-      // Keep only 2 users in couple nest, replace oldest inactive
-      room.users.sort((a, b) => (a.lastSeen || 0) - (b.lastSeen || 0));
-      room.users[0] = updatedUser;
-    } else {
-      room.users.push(updatedUser);
-    }
-  }
-
-  room.users.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+  const updatedUser = registerOrUpdateUserInRoom(room, user);
   scheduleSave();
 
   broadcastToAllInRoom(room.code, {
@@ -483,6 +491,7 @@ app.post('/api/room/:code/join', (req, res) => {
 app.get('/api/rooms/active', (req, res) => {
   const activeList: Array<{ code: string; partnerName: string; partnerAvatar: string; usersCount: number; lastActive: number }> = [];
   rooms.forEach((r) => {
+    if (!r.users || r.users.length === 0) return;
     const partner = r.users.find((u) => u.isOnline) || r.users[0];
     const lastActive = Math.max(...r.users.map((u) => u.lastSeen || 0), r.createdAt || 0);
     activeList.push({
@@ -734,7 +743,9 @@ const socketMeta = new WeakMap<WebSocket, SocketMeta>();
 const roomSockets = new Map<string, Set<WebSocket>>();
 
 function broadcastToRoom(code: string, payload: any, senderWs?: WebSocket) {
-  const sockets = roomSockets.get(code.toUpperCase());
+  const room = findRoom(code);
+  const targetCode = (room ? room.code : code).toUpperCase();
+  const sockets = roomSockets.get(targetCode);
   if (!sockets) return;
   const messageStr = JSON.stringify(payload);
   sockets.forEach((client) => {
@@ -747,7 +758,9 @@ function broadcastToRoom(code: string, payload: any, senderWs?: WebSocket) {
 }
 
 function broadcastToAllInRoom(code: string, payload: any) {
-  const sockets = roomSockets.get(code.toUpperCase());
+  const room = findRoom(code);
+  const targetCode = (room ? room.code : code).toUpperCase();
+  const sockets = roomSockets.get(targetCode);
   if (!sockets) return;
   const messageStr = JSON.stringify(payload);
   sockets.forEach((client) => {
@@ -765,9 +778,11 @@ wss.on('connection', (ws: WebSocket) => {
 
       if (type === 'join') {
         const rawCode = msg.code || '';
-        const code = rawCode.trim().toUpperCase();
         const user: UserProfile = msg.user;
-        if (!code || !user) return;
+        if (!rawCode || !user) return;
+
+        const room = getOrCreateRoom(rawCode);
+        const code = room.code.toUpperCase();
 
         socketMeta.set(ws, { code, userId: user.id, userName: user.name });
 
@@ -776,23 +791,7 @@ wss.on('connection', (ws: WebSocket) => {
         }
         roomSockets.get(code)!.add(ws);
 
-        const room = getOrCreateRoom(code);
-
-        // Update or add user
-        const existingIdx = room.users.findIndex((u) => u.id === user.id);
-        const updatedUser: UserProfile = {
-          ...user,
-          isOnline: true,
-          lastSeen: Date.now(),
-        };
-
-        if (existingIdx >= 0) {
-          room.users[existingIdx] = { ...room.users[existingIdx], ...updatedUser };
-        } else {
-          // Keep only up to 2 partners in a couple room, or allow reconnect
-          room.users.push(updatedUser);
-        }
-
+        const updatedUser = registerOrUpdateUserInRoom(room, user);
         scheduleSave();
 
         // Send full init state to joining user
@@ -1022,12 +1021,15 @@ wss.on('connection', (ws: WebSocket) => {
       }
     }
 
-    const room = rooms.get(code);
+    const room = findRoom(code);
     if (room) {
       const user = room.users.find((u) => u.id === userId);
       if (user) {
-        user.isOnline = false;
-        user.lastSeen = Date.now();
+        const now = Date.now();
+        // Only mark offline if no recent HTTP activity in the last 30s
+        if (now - (user.lastSeen || 0) > 30000) {
+          user.isOnline = false;
+        }
         scheduleSave();
         broadcastToRoom(code, {
           type: 'user_presence',

@@ -216,19 +216,18 @@
     "createdAt": 1792214690340,
     "users": [
       {
-        "id": "partner-phone-1",
-        "name": "Sweetheart",
-        "avatar": "🕊️",
-        "isOnline": true,
-        "lastSeen": 1792216189181
-      },
-      {
         "id": "usr-1792214688940-g7yd1n",
         "name": "test",
         "avatar": "🕊️",
-        "timezone": "Asia/Dhaka",
-        "isOnline": true,
-        "lastSeen": 1792215622673
+        "isOnline": false,
+        "lastSeen": 1792223295223
+      },
+      {
+        "id": "partner-phone-1",
+        "name": "Sweetheart",
+        "avatar": "🕊️",
+        "isOnline": false,
+        "lastSeen": 1792216189181
       }
     ],
     "messages": [

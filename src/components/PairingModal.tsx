@@ -106,6 +106,13 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
     };
   }, [initialCode]);
 
+  // Pre-register generated code on server when in create mode so partner can connect immediately
+  useEffect(() => {
+    if (mode === 'create' && generatedCode) {
+      fetch(`/api/room/${encodeURIComponent(generatedCode)}/sync`).catch(() => {});
+    }
+  }, [mode, generatedCode]);
+
   // Check if room exists and has partner info
   useEffect(() => {
     const targetCode = sanitizeNestCode(mode === 'join' ? pairCode : generatedCode);
@@ -155,7 +162,7 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
     const finalCode = sanitizeNestCode(raw);
     if (!finalCode) return;
 
-    const finalName = userName.trim() || (mode === 'create' ? 'Love Bird 1' : 'Love Bird 2');
+    const finalName = userName.trim() || (mode === 'create' ? 'Love Bird 1' : 'Sweetheart');
 
     let detectedTz = 'UTC';
     try {
@@ -343,10 +350,9 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
 
           {/* Nickname */}
           <div>
-            <label className="text-xs font-semibold text-slate-700">Your Nickname / Pet Name</label>
+            <label className="text-xs font-semibold text-slate-700">Your Nickname / Pet Name (optional)</label>
             <input
               type="text"
-              required
               placeholder="e.g. Maya, Honey, My Love, Alex..."
               value={userName}
               onChange={(e) => setUserName(e.target.value)}

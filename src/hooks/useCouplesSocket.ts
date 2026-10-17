@@ -113,7 +113,20 @@ export function useCouplesSocket() {
   const mergeRoomData = useCallback(
     (newRoom: RoomData, isInitial = false) => {
       setRoomData((prev) => {
-        // Check for new incoming chat messages to play sound
+        // Ensure current user is in users list if not already
+        const updatedUsers = [...newRoom.users];
+        if (
+          currentUser &&
+          !updatedUsers.some(
+            (u) =>
+              u.id === currentUser.id ||
+              (currentUser.name && u.name?.toLowerCase() === currentUser.name.toLowerCase())
+          )
+        ) {
+          updatedUsers.push({ ...currentUser, isOnline: true, lastSeen: Date.now() });
+        }
+
+        // Check for new incoming chat messages to play sound and trigger poke overlay
         if (prev && !isInitial) {
           const newMsgs = newRoom.messages.filter(
             (m) => !knownMessageIds.current.has(m.id)
@@ -121,6 +134,16 @@ export function useCouplesSocket() {
           newMsgs.forEach((m) => {
             if (m.senderId !== currentUser?.id && m.senderId !== 'system') {
               soundEffects.playMessagePop();
+              if (m.type === 'poke' && m.pokeType) {
+                setActivePoke({
+                  pokeType: m.pokeType,
+                  senderName: m.senderName,
+                  senderId: m.senderId,
+                  timestamp: m.timestamp,
+                });
+                if (m.pokeType === 'kiss') soundEffects.playKissPop();
+                else soundEffects.playHeartChime();
+              }
             }
           });
 
@@ -138,10 +161,10 @@ export function useCouplesSocket() {
         newRoom.photos.forEach((p) => knownPhotoIds.current.add(p.id));
         newRoom.letters.forEach((l) => knownLetterIds.current.add(l.id));
 
-        return newRoom;
+        return { ...newRoom, users: updatedUsers };
       });
     },
-    [currentUser?.id]
+    [currentUser]
   );
 
   // Initial HTTP Fetch & Background Fast Polling (Dual-Sync)
@@ -983,15 +1006,22 @@ export function useCouplesSocket() {
   }, []);
 
   // Compute partner user (prefer user with different id or name, online first)
-  const partnerUser =
-    roomData?.users.find((u) => u.id !== currentUser?.id) ||
-    roomData?.users.find(
+  const partnerUser = (() => {
+    if (!roomData?.users || !currentUser) return null;
+    const others = roomData.users.filter(
       (u) =>
-        u.name &&
-        currentUser?.name &&
-        u.name.trim().toLowerCase() !== currentUser.name.trim().toLowerCase()
-    ) ||
-    null;
+        u.id !== currentUser.id &&
+        (!currentUser.name || !u.name || u.name.trim().toLowerCase() !== currentUser.name.trim().toLowerCase())
+    );
+    if (others.length === 0) return null;
+    // Prefer user currently online, or most recently active
+    others.sort((a, b) => {
+      if (a.isOnline && !b.isOnline) return -1;
+      if (!a.isOnline && b.isOnline) return 1;
+      return (b.lastSeen || 0) - (a.lastSeen || 0);
+    });
+    return others[0];
+  })();
 
   return {
     currentCode,
