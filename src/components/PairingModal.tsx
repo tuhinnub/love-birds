@@ -38,24 +38,32 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
 
   // Check if room exists and has partner info
   useEffect(() => {
-    const targetCode = (mode === 'join' ? pairCode : generatedCode).trim().toUpperCase();
-    if (!targetCode) return;
+    const targetCode = (mode === 'join' ? pairCode : generatedCode).trim();
+    if (!targetCode) {
+      setPartnerFound(null);
+      return;
+    }
 
     let isDisposed = false;
-    fetch(`/api/room/${encodeURIComponent(targetCode)}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((room) => {
-        if (!isDisposed && room && room.users && room.users.length > 0) {
-          const names = room.users.map((u: any) => u.name).join(' & ');
-          setPartnerFound(names);
-        } else if (!isDisposed) {
-          setPartnerFound(null);
-        }
-      })
-      .catch(() => {});
+    const timer = setTimeout(() => {
+      fetch(`/api/room/check?code=${encodeURIComponent(targetCode)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!isDisposed && data?.exists) {
+            setPartnerFound(data.partnerName || 'Your Love');
+            if (data.code && mode === 'join') {
+              setPairCode(data.code);
+            }
+          } else if (!isDisposed) {
+            setPartnerFound(null);
+          }
+        })
+        .catch(() => {});
+    }, 250);
 
     return () => {
       isDisposed = true;
+      clearTimeout(timer);
     };
   }, [pairCode, generatedCode, mode]);
 
@@ -186,23 +194,31 @@ export const PairingModal: React.FC<PairingModalProps> = ({ onPair, initialCode 
               </p>
             </div>
           ) : (
-            <div>
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-700">Enter Partner's Nest Code</label>
-                {partnerFound && (
-                  <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
-                    <Check className="w-3 h-3" /> Nest active ({partnerFound})
-                  </span>
-                )}
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700">Enter Partner's Nest Code</label>
               <input
                 type="text"
                 required
-                placeholder="e.g. BIRD-4829"
+                placeholder="e.g. BIRD-4829 or 4829"
                 value={pairCode}
                 onChange={(e) => setPairCode(e.target.value.toUpperCase())}
-                className="w-full mt-1 px-4 py-2.5 font-mono text-base uppercase rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-400 font-bold"
+                className="w-full px-4 py-2.5 font-mono text-base uppercase rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-400 font-bold tracking-wider"
               />
+              {partnerFound ? (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">💕</span>
+                    <span>
+                      Nest Active! <strong>{partnerFound}</strong> is waiting for you!
+                    </span>
+                  </div>
+                  <Check className="w-4 h-4 text-emerald-600" />
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400">
+                  Enter the code your partner gave you (or just the 4 numbers).
+                </p>
+              )}
             </div>
           )}
 

@@ -160,109 +160,147 @@ function scheduleSave() {
 
 loadData();
 
+// Helper to normalize room code for foolproof matching across spaces, dashes, cases
+function normalizeRoomKey(rawCode: string): string {
+  if (!rawCode) return '';
+  return rawCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+}
+
+function findRoom(inputCode: string): RoomData | null {
+  if (!inputCode) return null;
+  const trimmed = inputCode.trim().toUpperCase();
+
+  // 1. Direct match
+  if (rooms.has(trimmed)) {
+    return rooms.get(trimmed)!;
+  }
+
+  // 2. Normalized match (ignores hyphens, spaces, etc.)
+  const cleanInput = normalizeRoomKey(inputCode);
+  if (!cleanInput) return null;
+
+  for (const [code, room] of rooms.entries()) {
+    if (normalizeRoomKey(code) === cleanInput) {
+      return room;
+    }
+  }
+
+  // 3. Suffix / number match (e.g. if partner enters just '8924' instead of 'BIRD-8924')
+  if (/^\d{3,6}$/.test(cleanInput)) {
+    for (const [code, room] of rooms.entries()) {
+      if (normalizeRoomKey(code).endsWith(cleanInput) || code.endsWith(`-${cleanInput}`)) {
+        return room;
+      }
+    }
+  }
+
+  return null;
+}
+
 // Helper to get or create room
 function getOrCreateRoom(rawCode: string): RoomData {
+  const existing = findRoom(rawCode);
+  if (existing) return existing;
+
   const code = rawCode.trim().toUpperCase();
-  if (!rooms.has(code)) {
-    const newRoom: RoomData = {
-      code,
-      createdAt: Date.now(),
-      users: [],
-      messages: [
-        {
-          id: 'welcome-1',
-          senderId: 'system',
-          senderName: 'Love Birds 🕊️',
-          type: 'text',
-          text: `Welcome to your private sanctuary! 💕 Share this code "${code}" with your partner to connect. You can draw sketches, send voice kisses, share photos, and count down the days until your next reunion!`,
-          timestamp: Date.now(),
-        },
-      ],
-      canvasStrokes: [],
-      photos: [
-        {
-          id: 'sample-p1',
-          senderId: 'system',
-          senderName: 'Love Birds',
-          url: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80',
-          caption: 'Counting down the sunsets until we hold hands again 🌅',
-          albumName: 'Our Memories',
-          location: 'Sunset Beach',
-          date: new Date().toISOString().split('T')[0],
-          timestamp: Date.now() - 86400000 * 2,
-          likes: [],
-        },
-        {
-          id: 'sample-p2',
-          senderId: 'system',
-          senderName: 'Love Birds',
-          url: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80',
-          caption: 'Our cozy coffee date over video call ☕❤️',
-          albumName: 'Daily Love',
-          location: 'Virtual Date',
-          date: new Date().toISOString().split('T')[0],
-          timestamp: Date.now() - 86400000,
-          likes: [],
-        },
-      ],
-      events: [
-        {
-          id: 'sample-ev1',
-          title: '✈️ Airport Reunion Hug!',
-          date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
-          time: '14:30',
-          category: 'visit',
-          notes: 'Terminal 3 arrivals! Bringing your favorite chocolate 🍫',
-          createdBy: 'system',
-          timestamp: Date.now(),
-        },
-        {
-          id: 'sample-ev2',
-          title: '🥂 Weekend Candlelight FaceTime Date',
-          date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-          time: '20:00',
-          category: 'date',
-          notes: 'We both cook pasta and dress up nicely 🍝✨',
-          createdBy: 'system',
-          timestamp: Date.now(),
-        },
-      ],
-      letters: [
-        {
-          id: 'sample-let1',
-          title: 'A Little Whisper',
-          openWhen: 'Open when distance feels too hard 🌧️',
-          content: 'Hey my love,\n\nI know miles feel heavy today, but remember that every sunrise brings us one day closer. No amount of distance can diminish how deeply you are loved. Close your eyes, take a deep breath, and feel my arms around you.\n\nForever yours 💕',
-          authorId: 'system',
-          authorName: 'Your Love',
-          sealedDate: new Date().toISOString().split('T')[0],
-          isOpened: false,
-        },
-      ],
-      notes: [
-        {
-          id: 'sample-n1',
-          text: 'Drink water and remember I adore you! 💧🥰',
-          color: '#FEF08A',
-          authorId: 'system',
-          authorName: 'Sweetheart',
-          timestamp: Date.now(),
-        },
-      ],
-      coupleMeta: {
-        nextMeetupDate: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
-        nextMeetupTitle: 'Airport Reunion Hug! ✈️',
-        anniversaryDate: new Date(Date.now() - 86400000 * 365).toISOString().split('T')[0],
-        user1Location: 'New York, USA',
-        user1Timezone: 'America/New_York',
-        user2Location: 'Paris, France',
-        user2Timezone: 'Europe/Paris',
+  const newRoom: RoomData = {
+    code,
+    createdAt: Date.now(),
+    users: [],
+    messages: [
+      {
+        id: 'welcome-1',
+        senderId: 'system',
+        senderName: 'Love Birds 🕊️',
+        type: 'text',
+        text: `Welcome to your private sanctuary! 💕 Share this code "${code}" with your partner to connect. You can draw sketches, send voice kisses, share photos, and count down the days until your next reunion!`,
+        timestamp: Date.now(),
       },
-    };
-    rooms.set(code, newRoom);
-    scheduleSave();
-  }
-  return rooms.get(code)!;
+    ],
+    canvasStrokes: [],
+    photos: [
+      {
+        id: 'sample-p1',
+        senderId: 'system',
+        senderName: 'Love Birds',
+        url: 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80',
+        caption: 'Counting down the sunsets until we hold hands again 🌅',
+        albumName: 'Our Memories',
+        location: 'Sunset Beach',
+        date: new Date().toISOString().split('T')[0],
+        timestamp: Date.now() - 86400000 * 2,
+        likes: [],
+      },
+      {
+        id: 'sample-p2',
+        senderId: 'system',
+        senderName: 'Love Birds',
+        url: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80',
+        caption: 'Our cozy coffee date over video call ☕❤️',
+        albumName: 'Daily Love',
+        location: 'Virtual Date',
+        date: new Date().toISOString().split('T')[0],
+        timestamp: Date.now() - 86400000,
+        likes: [],
+      },
+    ],
+    events: [
+      {
+        id: 'sample-ev1',
+        title: '✈️ Airport Reunion Hug!',
+        date: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
+        time: '14:30',
+        category: 'visit',
+        notes: 'Terminal 3 arrivals! Bringing your favorite chocolate 🍫',
+        createdBy: 'system',
+        timestamp: Date.now(),
+      },
+      {
+        id: 'sample-ev2',
+        title: '🥂 Weekend Candlelight FaceTime Date',
+        date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+        time: '20:00',
+        category: 'date',
+        notes: 'We both cook pasta and dress up nicely 🍝✨',
+        createdBy: 'system',
+        timestamp: Date.now(),
+      },
+    ],
+    letters: [
+      {
+        id: 'sample-let1',
+        title: 'A Little Whisper',
+        openWhen: 'Open when distance feels too hard 🌧️',
+        content: 'Hey my love,\n\nI know miles feel heavy today, but remember that every sunrise brings us one day closer. No amount of distance can diminish how deeply you are loved. Close your eyes, take a deep breath, and feel my arms around you.\n\nForever yours 💕',
+        authorId: 'system',
+        authorName: 'Your Love',
+        sealedDate: new Date().toISOString().split('T')[0],
+        isOpened: false,
+      },
+    ],
+    notes: [
+      {
+        id: 'sample-n1',
+        text: 'Drink water and remember I adore you! 💧🥰',
+        color: '#FEF08A',
+        authorId: 'system',
+        authorName: 'Sweetheart',
+        timestamp: Date.now(),
+      },
+    ],
+    coupleMeta: {
+      nextMeetupDate: new Date(Date.now() + 86400000 * 14).toISOString().split('T')[0],
+      nextMeetupTitle: 'Airport Reunion Hug! ✈️',
+      anniversaryDate: new Date(Date.now() - 86400000 * 365).toISOString().split('T')[0],
+      user1Location: 'New York, USA',
+      user1Timezone: 'America/New_York',
+      user2Location: 'Paris, France',
+      user2Timezone: 'Europe/Paris',
+    },
+  };
+  rooms.set(code, newRoom);
+  scheduleSave();
+  return newRoom;
 }
 
 const app = express();
@@ -282,62 +320,97 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // API endpoints
+app.get('/api/room/check', (req, res) => {
+  const code = (req.query.code as string || '').trim();
+  if (!code) return res.json({ exists: false });
+
+  const found = findRoom(code);
+  if (found) {
+    const partner = found.users.find((u) => u.isOnline) || found.users[0];
+    return res.json({
+      exists: true,
+      code: found.code,
+      usersCount: found.users.length,
+      partnerName: partner?.name || null,
+      partnerAvatar: partner?.avatar || '🕊️',
+    });
+  }
+  return res.json({ exists: false });
+});
+
 app.post('/api/room/create', (req, res) => {
   const prefixes = ['BIRD', 'DOVE', 'HEART', 'LOVE', 'SWEET', 'HONEY'];
   const randPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
   const randNum = Math.floor(1000 + Math.random() * 9000);
   const code = `${randPrefix}-${randNum}`;
   const room = getOrCreateRoom(code);
-  res.json({ code, room });
+  res.json({ code: room.code, room });
 });
 
 app.get('/api/room/:code', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   res.json(room);
 });
 
-// Dual-sync polling endpoint
+// Dual-sync polling endpoint with live presence calculation
 app.get('/api/room/:code/sync', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const userId = req.query.userId as string | undefined;
-  const room = getOrCreateRoom(code);
+  const userName = req.query.userName as string | undefined;
+  const room = getOrCreateRoom(req.params.code);
+  const now = Date.now();
 
-  if (userId) {
-    const user = room.users.find((u) => u.id === userId);
+  if (userId || userName) {
+    let user = room.users.find(
+      (u) => (userId && u.id === userId) || (userName && u.name.toLowerCase() === userName.toLowerCase())
+    );
     if (user) {
       user.isOnline = true;
-      user.lastSeen = Date.now();
+      user.lastSeen = now;
+      if (userId) user.id = userId;
     }
   }
+
+  // Update presence status dynamically: online if active in last 8s
+  room.users.forEach((u) => {
+    u.isOnline = now - (u.lastSeen || 0) < 8000;
+  });
 
   res.json(room);
 });
 
 // REST endpoint: Join / Update Profile
 app.post('/api/room/:code/join', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const user: UserProfile = req.body.user;
   if (!user || !user.id) return res.status(400).json({ error: 'Missing user' });
 
-  const room = getOrCreateRoom(code);
-  const existingIdx = room.users.findIndex((u) => u.id === user.id);
+  const room = getOrCreateRoom(req.params.code);
+  const existingIdx = room.users.findIndex(
+    (u) => u.id === user.id || u.name.trim().toLowerCase() === user.name.trim().toLowerCase()
+  );
   const updatedUser: UserProfile = { ...user, isOnline: true, lastSeen: Date.now() };
 
   if (existingIdx >= 0) {
     room.users[existingIdx] = { ...room.users[existingIdx], ...updatedUser };
   } else {
-    room.users.push(updatedUser);
+    if (room.users.length >= 2) {
+      // Keep only 2 users in couple nest, replace oldest inactive
+      room.users.sort((a, b) => (a.lastSeen || 0) - (b.lastSeen || 0));
+      room.users[0] = updatedUser;
+    } else {
+      room.users.push(updatedUser);
+    }
   }
 
+  room.users.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
   scheduleSave();
-  broadcastToAllInRoom(code, {
+
+  broadcastToAllInRoom(room.code, {
     type: 'user_presence',
     user: updatedUser,
     users: room.users,
   });
 
-  res.json({ success: true, room });
+  res.json({ success: true, room, code: room.code });
 });
 
 // REST endpoint: Post Chat Message
@@ -906,9 +979,12 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    const staticDir = fs.existsSync(path.resolve(__dirname, 'dist', 'index.html'))
+      ? path.resolve(__dirname, 'dist')
+      : (fs.existsSync(path.resolve(__dirname, 'index.html')) ? __dirname : path.resolve(process.cwd(), 'dist'));
+    app.use(express.static(staticDir));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.resolve(staticDir, 'index.html'));
     });
   }
 

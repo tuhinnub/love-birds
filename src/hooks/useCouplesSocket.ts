@@ -127,7 +127,7 @@ export function useCouplesSocket() {
         const res = await fetch(
           `/api/room/${encodeURIComponent(currentCode!)}/sync?userId=${encodeURIComponent(
             currentUser!.id
-          )}`
+          )}&userName=${encodeURIComponent(currentUser!.name)}`
         );
         if (res.ok) {
           const data: RoomData = await res.json();
@@ -907,17 +907,29 @@ export function useCouplesSocket() {
     []
   );
 
-  const pairWithCode = useCallback((code: string, user: UserProfile) => {
-    const normalized = code.trim().toUpperCase();
-    setCurrentCode(normalized);
+  const pairWithCode = useCallback(async (code: string, user: UserProfile) => {
+    const trimmed = code.trim().toUpperCase();
+    try {
+      const res = await fetch(`/api/room/${encodeURIComponent(trimmed)}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const finalCode = data.code || data.room?.code || trimmed;
+        setCurrentCode(finalCode);
+        setCurrentUser(user);
+        if (data.room) {
+          mergeRoomData(data.room, true);
+        }
+        return finalCode;
+      }
+    } catch {}
+    setCurrentCode(trimmed);
     setCurrentUser(user);
-    // Join via HTTP immediately
-    fetch(`/api/room/${encodeURIComponent(normalized)}/join`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user }),
-    }).catch(() => {});
-  }, []);
+    return trimmed;
+  }, [mergeRoomData]);
 
   const disconnectPair = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
@@ -934,8 +946,15 @@ export function useCouplesSocket() {
     window.history.replaceState({}, '', url.pathname);
   }, []);
 
-  // Compute partner user
-  const partnerUser = roomData?.users.find((u) => u.id !== currentUser?.id) || null;
+  // Compute partner user (prefer user with different name or id, sorted by active/online status)
+  const partnerUser =
+    roomData?.users.find(
+      (u) =>
+        u.id !== currentUser?.id &&
+        u.name.trim().toLowerCase() !== currentUser?.name.trim().toLowerCase()
+    ) ||
+    roomData?.users.find((u) => u.id !== currentUser?.id) ||
+    null;
 
   return {
     currentCode,
