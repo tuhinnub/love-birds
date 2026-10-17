@@ -18,6 +18,7 @@ interface ArtMessagingChatProps {
   currentUser: UserProfile;
   partnerUser: UserProfile | null;
   partnerTyping: string | null;
+  currentCode?: string;
   onSendMessage: (msg: Omit<ChatMessage, 'id' | 'senderId' | 'senderName' | 'timestamp'>) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onSendPoke: (pokeType: 'kiss' | 'hug' | 'hearts' | 'miss_you') => void;
@@ -36,6 +37,7 @@ export const ArtMessagingChat: React.FC<ArtMessagingChatProps> = ({
   currentUser,
   partnerUser,
   partnerTyping,
+  currentCode,
   onSendMessage,
   onToggleReaction,
   onSendPoke,
@@ -193,11 +195,20 @@ export const ArtMessagingChat: React.FC<ArtMessagingChatProps> = ({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const handleCopyCode = () => {
+    if (!currentCode) return;
+    navigator.clipboard.writeText(currentCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-210px)] min-h-[500px] max-w-4xl mx-auto w-full bg-white/90 backdrop-blur-md rounded-3xl border border-rose-100 shadow-xl overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-175px)] sm:h-[calc(100vh-190px)] min-h-[420px] max-w-4xl mx-auto w-full bg-white/95 backdrop-blur-md rounded-3xl border border-rose-100 shadow-xl overflow-hidden">
       {/* Top Bar with partner info & quick poke darts */}
-      <div className="px-5 py-3 border-b border-rose-100/80 bg-gradient-to-r from-rose-50/70 via-pink-50/50 to-white flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
+      <div className="px-4 sm:px-5 py-2.5 sm:py-3 border-b border-rose-100/80 bg-gradient-to-r from-rose-50/70 via-pink-50/50 to-white flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="relative">
             <span className="text-2xl">{partnerUser?.avatar || '🕊️'}</span>
             <span
@@ -210,7 +221,8 @@ export const ArtMessagingChat: React.FC<ArtMessagingChatProps> = ({
             <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
               <span>{partnerUser?.name || 'Partner Waiting'}</span>
               {partnerUser?.isOnline ? (
-                <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                   online now 💕
                 </span>
               ) : (
@@ -260,9 +272,33 @@ export const ArtMessagingChat: React.FC<ArtMessagingChatProps> = ({
       </div>
 
       {/* Message Feed */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gradient-to-b from-rose-50/20 via-white to-pink-50/20">
+      <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 space-y-3.5 bg-gradient-to-b from-rose-50/20 via-white to-pink-50/20">
+        {/* Connection status header notice */}
+        {partnerUser ? (
+          <div className="flex justify-center">
+            <div className="px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-1.5 shadow-2xs animate-in fade-in">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Connected with {partnerUser.name} ({partnerUser.avatar || '🕊️'})</span>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3.5 bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 border border-rose-200 rounded-2xl text-center space-y-1.5">
+            <span className="text-xl">🕊️💌</span>
+            <p className="text-xs font-bold text-slate-700">Waiting for your partner to join!</p>
+            <p className="text-[11px] text-slate-500">
+              Tell your partner to enter Nest Code: <span className="font-mono font-bold text-rose-600 bg-white px-2 py-0.5 rounded-md border border-rose-200">{currentCode}</span>
+            </p>
+            <button
+              onClick={handleCopyCode}
+              className="inline-flex items-center gap-1 px-3 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+            >
+              <span>{copiedCode ? '✅ Code Copied!' : '📋 Copy Nest Code'}</span>
+            </button>
+          </div>
+        )}
+
         {messages.length === 0 && (
-          <div className="text-center py-12 text-slate-400 space-y-2">
+          <div className="text-center py-8 text-slate-400 space-y-2">
             <span className="text-4xl block">🕊️💌</span>
             <p className="text-sm font-medium text-slate-600">Your private love nest is waiting!</p>
             <p className="text-xs">Send a sweet note, draw a doodle, or blow a kiss across the miles.</p>
@@ -275,7 +311,7 @@ export const ArtMessagingChat: React.FC<ArtMessagingChatProps> = ({
 
           if (isSystem) {
             return (
-              <div key={msg.id} className="flex justify-center my-3">
+              <div key={msg.id} className="flex justify-center my-2">
                 <div className="px-4 py-2 rounded-2xl bg-rose-50 border border-rose-100/90 text-xs text-rose-700 max-w-md text-center shadow-2xs font-medium">
                   {msg.text}
                 </div>

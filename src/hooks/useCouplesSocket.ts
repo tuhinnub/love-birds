@@ -16,6 +16,30 @@ import { soundEffects } from '../utils/audio';
 
 const STORAGE_KEY = 'lovebirds_session_v2';
 
+function createFallbackRoom(code: string, user?: UserProfile | null): RoomData {
+  return {
+    code,
+    createdAt: Date.now(),
+    users: user ? [user] : [],
+    messages: [
+      {
+        id: 'welcome-1',
+        senderId: 'system',
+        senderName: 'Love Birds 🕊️',
+        type: 'text',
+        text: `Welcome to your private sanctuary! 💕 Share code "${code}" with your partner to connect. You can draw sketches, send voice kisses, share photos, and count down the days until your next reunion!`,
+        timestamp: Date.now(),
+      },
+    ],
+    canvasStrokes: [],
+    photos: [],
+    events: [],
+    letters: [],
+    notes: [],
+    coupleMeta: {},
+  };
+}
+
 export function useCouplesSocket() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     try {
@@ -43,7 +67,12 @@ export function useCouplesSocket() {
     return null;
   });
 
-  const [roomData, setRoomData] = useState<RoomData | null>(null);
+  const [roomData, setRoomData] = useState<RoomData | null>(() => {
+    if (currentCode) {
+      return createFallbackRoom(currentCode, currentUser);
+    }
+    return null;
+  });
   const [isConnected, setIsConnected] = useState(false);
   const [partnerLivePointer, setPartnerLivePointer] = useState<{
     x: number;
@@ -123,11 +152,18 @@ export function useCouplesSocket() {
 
     // Fast sync fetcher
     async function syncViaHttp(isInit = false) {
+      if (!currentCode || !currentUser) return;
       try {
+        const queryParams = new URLSearchParams({
+          userId: currentUser.id,
+          userName: currentUser.name || '',
+          userAvatar: currentUser.avatar || '🕊️',
+          userCity: currentUser.city || '',
+          userTimezone: currentUser.timezone || '',
+        });
+
         const res = await fetch(
-          `/api/room/${encodeURIComponent(currentCode!)}/sync?userId=${encodeURIComponent(
-            currentUser!.id
-          )}&userName=${encodeURIComponent(currentUser!.name)}`
+          `/api/room/${encodeURIComponent(currentCode)}/sync?${queryParams.toString()}`
         );
         if (res.ok) {
           const data: RoomData = await res.json();
@@ -151,10 +187,10 @@ export function useCouplesSocket() {
       body: JSON.stringify({ user: currentUser }),
     }).catch(() => {});
 
-    // Polling interval every 1.5 seconds for instant multi-phone synchronization
+    // Polling interval every 1 second for instant multi-phone synchronization
     const pollInterval = setInterval(() => {
       syncViaHttp(false);
-    }, 1500);
+    }, 1000);
 
     // Re-sync immediately on window focus / mobile wake
     const handleVisibility = () => {
@@ -470,11 +506,11 @@ export function useCouplesSocket() {
         timestamp: Date.now(),
       };
 
-      // 1. Optimistic local update
+      // 1. Optimistic local update (never drops message even if roomData was initially null)
       setRoomData((prev) => {
-        if (!prev) return prev;
-        if (prev.messages.some((m) => m.id === msg.id)) return prev;
-        return { ...prev, messages: [...prev.messages, msg] };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        if (base.messages.some((m) => m.id === msg.id)) return base;
+        return { ...base, messages: [...base.messages, msg] };
       });
       soundEffects.playMessagePop();
 
@@ -499,10 +535,10 @@ export function useCouplesSocket() {
 
       // Optimistic
       setRoomData((prev) => {
-        if (!prev) return prev;
+        const base = prev || createFallbackRoom(currentCode, currentUser);
         return {
-          ...prev,
-          messages: prev.messages.map((m) => {
+          ...base,
+          messages: base.messages.map((m) => {
             if (m.id !== messageId) return m;
             const rx = { ...(m.reactions || {}) };
             const list = rx[emoji] || [];
@@ -543,9 +579,9 @@ export function useCouplesSocket() {
 
       // Optimistic
       setRoomData((prev) => {
-        if (!prev) return prev;
-        if (prev.canvasStrokes.some((s) => s.id === stroke.id)) return prev;
-        return { ...prev, canvasStrokes: [...prev.canvasStrokes, stroke] };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        if (base.canvasStrokes.some((s) => s.id === stroke.id)) return base;
+        return { ...base, canvasStrokes: [...base.canvasStrokes, stroke] };
       });
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -558,7 +594,7 @@ export function useCouplesSocket() {
         body: JSON.stringify({ stroke }),
       }).catch(() => {});
     },
-    [currentCode]
+    [currentCode, currentUser]
   );
 
   const clearCanvas = useCallback(() => {
@@ -728,8 +764,8 @@ export function useCouplesSocket() {
       };
 
       setRoomData((prev) => {
-        if (!prev) return prev;
-        return { ...prev, events: [...prev.events, event] };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        return { ...base, events: [...base.events, event] };
       });
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -750,8 +786,8 @@ export function useCouplesSocket() {
       if (!currentCode) return;
 
       setRoomData((prev) => {
-        if (!prev) return prev;
-        return { ...prev, events: prev.events.filter((e) => e.id !== eventId) };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        return { ...base, events: base.events.filter((e) => e.id !== eventId) };
       });
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -764,7 +800,7 @@ export function useCouplesSocket() {
         body: JSON.stringify({ eventId }),
       }).catch(() => {});
     },
-    [currentCode]
+    [currentCode, currentUser]
   );
 
   const addLoveLetter = useCallback(
@@ -780,8 +816,8 @@ export function useCouplesSocket() {
       };
 
       setRoomData((prev) => {
-        if (!prev) return prev;
-        return { ...prev, letters: [...prev.letters, letter] };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        return { ...base, letters: [...base.letters, letter] };
       });
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -802,10 +838,10 @@ export function useCouplesSocket() {
       if (!currentCode) return;
 
       setRoomData((prev) => {
-        if (!prev) return prev;
+        const base = prev || createFallbackRoom(currentCode, currentUser);
         return {
-          ...prev,
-          letters: prev.letters.map((l) =>
+          ...base,
+          letters: base.letters.map((l) =>
             l.id === letterId ? { ...l, isOpened: true, openedAt: new Date().toISOString() } : l
           ),
         };
@@ -821,7 +857,7 @@ export function useCouplesSocket() {
         body: JSON.stringify({ letterId }),
       }).catch(() => {});
     },
-    [currentCode]
+    [currentCode, currentUser]
   );
 
   const addStickyNote = useCallback(
@@ -837,8 +873,8 @@ export function useCouplesSocket() {
       };
 
       setRoomData((prev) => {
-        if (!prev) return prev;
-        return { ...prev, notes: [...prev.notes, note] };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        return { ...base, notes: [...base.notes, note] };
       });
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -859,8 +895,8 @@ export function useCouplesSocket() {
       if (!currentCode) return;
 
       setRoomData((prev) => {
-        if (!prev) return prev;
-        return { ...prev, notes: prev.notes.filter((n) => n.id !== noteId) };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        return { ...base, notes: base.notes.filter((n) => n.id !== noteId) };
       });
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -873,7 +909,7 @@ export function useCouplesSocket() {
         body: JSON.stringify({ noteId }),
       }).catch(() => {});
     },
-    [currentCode]
+    [currentCode, currentUser]
   );
 
   const updateCoupleMeta = useCallback(
@@ -881,8 +917,8 @@ export function useCouplesSocket() {
       if (!currentCode) return;
 
       setRoomData((prev) => {
-        if (!prev) return prev;
-        return { ...prev, coupleMeta: { ...prev.coupleMeta, ...meta } };
+        const base = prev || createFallbackRoom(currentCode, currentUser);
+        return { ...base, coupleMeta: { ...base.coupleMeta, ...meta } };
       });
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -895,7 +931,7 @@ export function useCouplesSocket() {
         body: JSON.stringify({ meta }),
       }).catch(() => {});
     },
-    [currentCode]
+    [currentCode, currentUser]
   );
 
   const sendTyping = useCallback(
@@ -909,6 +945,9 @@ export function useCouplesSocket() {
 
   const pairWithCode = useCallback(async (code: string, user: UserProfile) => {
     const trimmed = code.trim().toUpperCase();
+    setCurrentCode(trimmed);
+    setCurrentUser(user);
+    setRoomData((prev) => prev || createFallbackRoom(trimmed, user));
     try {
       const res = await fetch(`/api/room/${encodeURIComponent(trimmed)}/join`, {
         method: 'POST',
@@ -919,15 +958,12 @@ export function useCouplesSocket() {
         const data = await res.json();
         const finalCode = data.code || data.room?.code || trimmed;
         setCurrentCode(finalCode);
-        setCurrentUser(user);
         if (data.room) {
           mergeRoomData(data.room, true);
         }
         return finalCode;
       }
     } catch {}
-    setCurrentCode(trimmed);
-    setCurrentUser(user);
     return trimmed;
   }, [mergeRoomData]);
 
@@ -946,14 +982,15 @@ export function useCouplesSocket() {
     window.history.replaceState({}, '', url.pathname);
   }, []);
 
-  // Compute partner user (prefer user with different name or id, sorted by active/online status)
+  // Compute partner user (prefer user with different id or name, online first)
   const partnerUser =
+    roomData?.users.find((u) => u.id !== currentUser?.id) ||
     roomData?.users.find(
       (u) =>
-        u.id !== currentUser?.id &&
-        u.name.trim().toLowerCase() !== currentUser?.name.trim().toLowerCase()
+        u.name &&
+        currentUser?.name &&
+        u.name.trim().toLowerCase() !== currentUser.name.trim().toLowerCase()
     ) ||
-    roomData?.users.find((u) => u.id !== currentUser?.id) ||
     null;
 
   return {

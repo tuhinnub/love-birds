@@ -1,0 +1,888 @@
+{
+  "DOVE-1499": {
+    "code": "DOVE-1499",
+    "createdAt": 1792212392150,
+    "users": [],
+    "messages": [
+      {
+        "id": "welcome-1",
+        "senderId": "system",
+        "senderName": "Love Birds 🕊️",
+        "type": "text",
+        "text": "Welcome to your private sanctuary! 💕 Share this code \"DOVE-1499\" with your partner to connect. You can draw sketches, send voice kisses, share photos, and count down the days until your next reunion!",
+        "timestamp": 1792212392150
+      }
+    ],
+    "canvasStrokes": [],
+    "photos": [
+      {
+        "id": "sample-p1",
+        "senderId": "system",
+        "senderName": "Love Birds",
+        "url": "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80",
+        "caption": "Counting down the sunsets until we hold hands again 🌅",
+        "albumName": "Our Memories",
+        "location": "Sunset Beach",
+        "date": "2026-10-17",
+        "timestamp": 1792039592150,
+        "likes": []
+      },
+      {
+        "id": "sample-p2",
+        "senderId": "system",
+        "senderName": "Love Birds",
+        "url": "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80",
+        "caption": "Our cozy coffee date over video call ☕❤️",
+        "albumName": "Daily Love",
+        "location": "Virtual Date",
+        "date": "2026-10-17",
+        "timestamp": 1792125992150,
+        "likes": []
+      }
+    ],
+    "events": [
+      {
+        "id": "sample-ev1",
+        "title": "✈️ Airport Reunion Hug!",
+        "date": "2026-10-31",
+        "time": "14:30",
+        "category": "visit",
+        "notes": "Terminal 3 arrivals! Bringing your favorite chocolate 🍫",
+        "createdBy": "system",
+        "timestamp": 1792212392150
+      },
+      {
+        "id": "sample-ev2",
+        "title": "🥂 Weekend Candlelight FaceTime Date",
+        "date": "2026-10-20",
+        "time": "20:00",
+        "category": "date",
+        "notes": "We both cook pasta and dress up nicely 🍝✨",
+        "createdBy": "system",
+        "timestamp": 1792212392150
+      }
+    ],
+    "letters": [
+      {
+        "id": "sample-let1",
+        "title": "A Little Whisper",
+        "openWhen": "Open when distance feels too hard 🌧️",
+        "content": "Hey my love,\n\nI know miles feel heavy today, but remember that every sunrise brings us one day closer. No amount of distance can diminish how deeply you are loved. Close your eyes, take a deep breath, and feel my arms around you.\n\nForever yours 💕",
+        "authorId": "system",
+        "authorName": "Your Love",
+        "sealedDate": "2026-10-17",
+        "isOpened": false
+      }
+    ],
+    "notes": [
+      {
+        "id": "sample-n1",
+        "text": "Drink water and remember I adore you! 💧🥰",
+        "color": "#FEF08A",
+        "authorId": "system",
+        "authorName": "Sweetheart",
+        "timestamp": 1792212392150
+      }
+    ],
+    "coupleMeta": {
+      "nextMeetupDate": "2026-10-31",
+      "nextMeetupTitle": "Airport Reunion Hug! ✈️",
+      "anniversaryDate": "2025-10-17",
+      "user1Location": "New York, USA",
+      "user1Timezone": "America/New_York",
+      "user2Location": "Paris, France",
+      "user2Timezone": "Europe/Paris"
+    }
+  },
+  "SWEET-7711": {
+    "code": "SWEET-7711",
+    "createdAt": 1792212795537,
+    "users": [
+      {
+        "id": "u2",
+        "name": "Alex",
+        "avatar": "🦢",
+        "isOnline": true,
+        "lastSeen": 1792212795562
+      },
+      {
+        "id": "u1",
+        "name": "Maya",
+        "avatar": "🕊️",
+        "isOnline": true,
+        "lastSeen": 1792212795574
+      }
+    ],
+    "messages": [
+      {
+        "id": "welcome-1",
+        "senderId": "system",
+        "senderName": "Love Birds 🕊️",
+        "type": "text",
+        "text": "Welcome to your private sanctuary! 💕 Share this code \"SWEET-7711\" with your partner to connect. You can draw sketches, send voice kisses, share photos, and count down the days until your next reunion!",
+        "timestamp": 1792212795537
+      },
+      {
+        "id": "m1",
+        "senderId": "u2",
+        "senderName": "Alex",
+        "text": "I love you!",
+        "timestamp": 1792212795564
+      }
+    ],
+    "canvasStrokes": [],
+    "photos": [
+      {
+        "id": "sample-p1",
+        "senderId": "system",
+        "senderName": "Love Birds",
+        "url": "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80",
+        "caption": "Counting down the sunsets until we hold hands again 🌅",
+        "albumName": "Our Memories",
+        "location": "Sunset Beach",
+        "date": "2026-10-17",
+        "timestamp": 1792039995537,
+        "likes": []
+      },
+      {
+        "id": "sample-p2",
+        "senderId": "system",
+        "senderName": "Love Birds",
+        "url": "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80",
+        "caption": "Our cozy coffee date over video call ☕❤️",
+        "albumName": "Daily Love",
+        "location": "Virtual Date",
+        "date": "2026-10-17",
+        "timestamp": 1792126395537,
+        "likes": []
+      }
+    ],
+    "events": [
+      {
+        "id": "sample-ev1",
+        "title": "✈️ Airport Reunion Hug!",
+        "date": "2026-10-31",
+        "time": "14:30",
+        "category": "visit",
+        "notes": "Terminal 3 arrivals! Bringing your favorite chocolate 🍫",
+        "createdBy": "system",
+        "timestamp": 1792212795537
+      },
+      {
+        "id": "sample-ev2",
+        "title": "🥂 Weekend Candlelight FaceTime Date",
+        "date": "2026-10-20",
+        "time": "20:00",
+        "category": "date",
+        "notes": "We both cook pasta and dress up nicely 🍝✨",
+        "createdBy": "system",
+        "timestamp": 1792212795537
+      }
+    ],
+    "letters": [
+      {
+        "id": "sample-let1",
+        "title": "A Little Whisper",
+        "openWhen": "Open when distance feels too hard 🌧️",
+        "content": "Hey my love,\n\nI know miles feel heavy today, but remember that every sunrise brings us one day closer. No amount of distance can diminish how deeply you are loved. Close your eyes, take a deep breath, and feel my arms around you.\n\nForever yours 💕",
+        "authorId": "system",
+        "authorName": "Your Love",
+        "sealedDate": "2026-10-17",
+        "isOpened": false
+      }
+    ],
+    "notes": [
+      {
+        "id": "sample-n1",
+        "text": "Drink water and remember I adore you! 💧🥰",
+        "color": "#FEF08A",
+        "authorId": "system",
+        "authorName": "Sweetheart",
+        "timestamp": 1792212795537
+      }
+    ],
+    "coupleMeta": {
+      "nextMeetupDate": "2026-10-31",
+      "nextMeetupTitle": "Airport Reunion Hug! ✈️",
+      "anniversaryDate": "2025-10-17",
+      "user1Location": "New York, USA",
+      "user1Timezone": "America/New_York",
+      "user2Location": "Paris, France",
+      "user2Timezone": "Europe/Paris"
+    }
+  },
+  "DOVE-6264": {
+    "code": "DOVE-6264",
+    "createdAt": 1792214690340,
+    "users": [
+      {
+        "id": "partner-phone-1",
+        "name": "Sweetheart",
+        "avatar": "🕊️",
+        "isOnline": true,
+        "lastSeen": 1792216189181
+      },
+      {
+        "id": "usr-1792214688940-g7yd1n",
+        "name": "test",
+        "avatar": "🕊️",
+        "timezone": "Asia/Dhaka",
+        "isOnline": true,
+        "lastSeen": 1792215622673
+      }
+    ],
+    "messages": [
+      {
+        "id": "welcome-1",
+        "senderId": "system",
+        "senderName": "Love Birds 🕊️",
+        "type": "text",
+        "text": "Welcome to your private sanctuary! 💕 Share this code \"DOVE-6264\" with your partner to connect. You can draw sketches, send voice kisses, share photos, and count down the days until your next reunion!",
+        "timestamp": 1792214690340
+      },
+      {
+        "id": "m1",
+        "senderId": "p2",
+        "senderName": "partner",
+        "type": "text",
+        "text": "hello from partner!",
+        "timestamp": 1792215650000
+      }
+    ],
+    "canvasStrokes": [
+      {
+        "id": "stroke-1792214767666-d8gf5w",
+        "color": "#f43f5e",
+        "size": 4,
+        "mode": "brush",
+        "points": [
+          {
+            "x": 186.19999885559082,
+            "y": 90.21249389648438
+          },
+          {
+            "x": 176.19999885559082,
+            "y": 92.21249389648438
+          },
+          {
+            "x": 167.19999885559082,
+            "y": 95.21249389648438
+          },
+          {
+            "x": 147.19999885559082,
+            "y": 109.21249389648438
+          },
+          {
+            "x": 140.19999885559082,
+            "y": 115.21249389648438
+          },
+          {
+            "x": 128.19999885559082,
+            "y": 133.21249389648438
+          },
+          {
+            "x": 125.19999885559082,
+            "y": 145.21249389648438
+          },
+          {
+            "x": 124.19999885559082,
+            "y": 158.21249389648438
+          },
+          {
+            "x": 124.19999885559082,
+            "y": 169.21249389648438
+          },
+          {
+            "x": 130.19999885559082,
+            "y": 185.21249389648438
+          },
+          {
+            "x": 138.19999885559082,
+            "y": 196.21249389648438
+          },
+          {
+            "x": 151.19999885559082,
+            "y": 206.21249389648438
+          },
+          {
+            "x": 159.19999885559082,
+            "y": 214.21249389648438
+          },
+          {
+            "x": 171.19999885559082,
+            "y": 221.21249389648438
+          },
+          {
+            "x": 243.19999885559082,
+            "y": 257.2124938964844
+          },
+          {
+            "x": 327.1999988555908,
+            "y": 274.2124938964844
+          },
+          {
+            "x": 336.1999988555908,
+            "y": 273.2124938964844
+          },
+          {
+            "x": 369.1999988555908,
+            "y": 244.21249389648438
+          },
+          {
+            "x": 383.1999988555908,
+            "y": 221.21249389648438
+          },
+          {
+            "x": 387.1999988555908,
+            "y": 214.21249389648438
+          },
+          {
+            "x": 390.1999988555908,
+            "y": 193.21249389648438
+          },
+          {
+            "x": 378.1999988555908,
+            "y": 129.21249389648438
+          },
+          {
+            "x": 371.1999988555908,
+            "y": 117.21249389648438
+          },
+          {
+            "x": 363.1999988555908,
+            "y": 107.21249389648438
+          },
+          {
+            "x": 351.1999988555908,
+            "y": 97.21249389648438
+          },
+          {
+            "x": 331.1999988555908,
+            "y": 92.21249389648438
+          },
+          {
+            "x": 311.1999988555908,
+            "y": 91.21249389648438
+          },
+          {
+            "x": 291.1999988555908,
+            "y": 98.21249389648438
+          },
+          {
+            "x": 277.1999988555908,
+            "y": 106.21249389648438
+          },
+          {
+            "x": 260.1999988555908,
+            "y": 124.21249389648438
+          },
+          {
+            "x": 251.19999885559082,
+            "y": 138.21249389648438
+          },
+          {
+            "x": 244.19999885559082,
+            "y": 154.21249389648438
+          },
+          {
+            "x": 238.19999885559082,
+            "y": 177.21249389648438
+          },
+          {
+            "x": 237.19999885559082,
+            "y": 190.21249389648438
+          },
+          {
+            "x": 240.19999885559082,
+            "y": 203.21249389648438
+          },
+          {
+            "x": 253.19999885559082,
+            "y": 222.21249389648438
+          },
+          {
+            "x": 264.1999988555908,
+            "y": 234.21249389648438
+          },
+          {
+            "x": 287.1999988555908,
+            "y": 246.21249389648438
+          },
+          {
+            "x": 304.1999988555908,
+            "y": 248.21249389648438
+          },
+          {
+            "x": 319.1999988555908,
+            "y": 249.21249389648438
+          },
+          {
+            "x": 335.1999988555908,
+            "y": 239.21249389648438
+          },
+          {
+            "x": 345.1999988555908,
+            "y": 225.21249389648438
+          },
+          {
+            "x": 349.1999988555908,
+            "y": 208.21249389648438
+          },
+          {
+            "x": 347.1999988555908,
+            "y": 174.21249389648438
+          },
+          {
+            "x": 339.1999988555908,
+            "y": 153.21249389648438
+          },
+          {
+            "x": 316.1999988555908,
+            "y": 119.21249389648438
+          },
+          {
+            "x": 305.1999988555908,
+            "y": 107.21249389648438
+          },
+          {
+            "x": 297.1999988555908,
+            "y": 100.21249389648438
+          },
+          {
+            "x": 289.1999988555908,
+            "y": 98.21249389648438
+          },
+          {
+            "x": 287.1999988555908,
+            "y": 100.21249389648438
+          },
+          {
+            "x": 283.1999988555908,
+            "y": 117.21249389648438
+          },
+          {
+            "x": 290.1999988555908,
+            "y": 144.21249389648438
+          },
+          {
+            "x": 300.1999988555908,
+            "y": 166.21249389648438
+          },
+          {
+            "x": 312.1999988555908,
+            "y": 184.21249389648438
+          },
+          {
+            "x": 323.1999988555908,
+            "y": 198.21249389648438
+          },
+          {
+            "x": 327.1999988555908,
+            "y": 202.21249389648438
+          },
+          {
+            "x": 328.1999988555908,
+            "y": 203.21249389648438
+          },
+          {
+            "x": 329.1999988555908,
+            "y": 203.21249389648438
+          },
+          {
+            "x": 330.1999988555908,
+            "y": 197.21249389648438
+          },
+          {
+            "x": 330.1999988555908,
+            "y": 187.21249389648438
+          },
+          {
+            "x": 330.1999988555908,
+            "y": 180.21249389648438
+          },
+          {
+            "x": 328.1999988555908,
+            "y": 169.21249389648438
+          },
+          {
+            "x": 327.1999988555908,
+            "y": 163.21249389648438
+          },
+          {
+            "x": 324.1999988555908,
+            "y": 159.21249389648438
+          },
+          {
+            "x": 323.1999988555908,
+            "y": 158.21249389648438
+          },
+          {
+            "x": 323.1999988555908,
+            "y": 161.21249389648438
+          },
+          {
+            "x": 328.1999988555908,
+            "y": 169.21249389648438
+          }
+        ],
+        "authorId": "usr-1792214688940-g7yd1n"
+      },
+      {
+        "id": "stroke-1792214767666-d8gf5w",
+        "color": "#f43f5e",
+        "size": 4,
+        "mode": "brush",
+        "points": [
+          {
+            "x": 186.19999885559082,
+            "y": 90.21249389648438
+          },
+          {
+            "x": 176.19999885559082,
+            "y": 92.21249389648438
+          },
+          {
+            "x": 167.19999885559082,
+            "y": 95.21249389648438
+          },
+          {
+            "x": 147.19999885559082,
+            "y": 109.21249389648438
+          },
+          {
+            "x": 140.19999885559082,
+            "y": 115.21249389648438
+          },
+          {
+            "x": 128.19999885559082,
+            "y": 133.21249389648438
+          },
+          {
+            "x": 125.19999885559082,
+            "y": 145.21249389648438
+          },
+          {
+            "x": 124.19999885559082,
+            "y": 158.21249389648438
+          },
+          {
+            "x": 124.19999885559082,
+            "y": 169.21249389648438
+          },
+          {
+            "x": 130.19999885559082,
+            "y": 185.21249389648438
+          },
+          {
+            "x": 138.19999885559082,
+            "y": 196.21249389648438
+          },
+          {
+            "x": 151.19999885559082,
+            "y": 206.21249389648438
+          },
+          {
+            "x": 159.19999885559082,
+            "y": 214.21249389648438
+          },
+          {
+            "x": 171.19999885559082,
+            "y": 221.21249389648438
+          },
+          {
+            "x": 243.19999885559082,
+            "y": 257.2124938964844
+          },
+          {
+            "x": 327.1999988555908,
+            "y": 274.2124938964844
+          },
+          {
+            "x": 336.1999988555908,
+            "y": 273.2124938964844
+          },
+          {
+            "x": 369.1999988555908,
+            "y": 244.21249389648438
+          },
+          {
+            "x": 383.1999988555908,
+            "y": 221.21249389648438
+          },
+          {
+            "x": 387.1999988555908,
+            "y": 214.21249389648438
+          },
+          {
+            "x": 390.1999988555908,
+            "y": 193.21249389648438
+          },
+          {
+            "x": 378.1999988555908,
+            "y": 129.21249389648438
+          },
+          {
+            "x": 371.1999988555908,
+            "y": 117.21249389648438
+          },
+          {
+            "x": 363.1999988555908,
+            "y": 107.21249389648438
+          },
+          {
+            "x": 351.1999988555908,
+            "y": 97.21249389648438
+          },
+          {
+            "x": 331.1999988555908,
+            "y": 92.21249389648438
+          },
+          {
+            "x": 311.1999988555908,
+            "y": 91.21249389648438
+          },
+          {
+            "x": 291.1999988555908,
+            "y": 98.21249389648438
+          },
+          {
+            "x": 277.1999988555908,
+            "y": 106.21249389648438
+          },
+          {
+            "x": 260.1999988555908,
+            "y": 124.21249389648438
+          },
+          {
+            "x": 251.19999885559082,
+            "y": 138.21249389648438
+          },
+          {
+            "x": 244.19999885559082,
+            "y": 154.21249389648438
+          },
+          {
+            "x": 238.19999885559082,
+            "y": 177.21249389648438
+          },
+          {
+            "x": 237.19999885559082,
+            "y": 190.21249389648438
+          },
+          {
+            "x": 240.19999885559082,
+            "y": 203.21249389648438
+          },
+          {
+            "x": 253.19999885559082,
+            "y": 222.21249389648438
+          },
+          {
+            "x": 264.1999988555908,
+            "y": 234.21249389648438
+          },
+          {
+            "x": 287.1999988555908,
+            "y": 246.21249389648438
+          },
+          {
+            "x": 304.1999988555908,
+            "y": 248.21249389648438
+          },
+          {
+            "x": 319.1999988555908,
+            "y": 249.21249389648438
+          },
+          {
+            "x": 335.1999988555908,
+            "y": 239.21249389648438
+          },
+          {
+            "x": 345.1999988555908,
+            "y": 225.21249389648438
+          },
+          {
+            "x": 349.1999988555908,
+            "y": 208.21249389648438
+          },
+          {
+            "x": 347.1999988555908,
+            "y": 174.21249389648438
+          },
+          {
+            "x": 339.1999988555908,
+            "y": 153.21249389648438
+          },
+          {
+            "x": 316.1999988555908,
+            "y": 119.21249389648438
+          },
+          {
+            "x": 305.1999988555908,
+            "y": 107.21249389648438
+          },
+          {
+            "x": 297.1999988555908,
+            "y": 100.21249389648438
+          },
+          {
+            "x": 289.1999988555908,
+            "y": 98.21249389648438
+          },
+          {
+            "x": 287.1999988555908,
+            "y": 100.21249389648438
+          },
+          {
+            "x": 283.1999988555908,
+            "y": 117.21249389648438
+          },
+          {
+            "x": 290.1999988555908,
+            "y": 144.21249389648438
+          },
+          {
+            "x": 300.1999988555908,
+            "y": 166.21249389648438
+          },
+          {
+            "x": 312.1999988555908,
+            "y": 184.21249389648438
+          },
+          {
+            "x": 323.1999988555908,
+            "y": 198.21249389648438
+          },
+          {
+            "x": 327.1999988555908,
+            "y": 202.21249389648438
+          },
+          {
+            "x": 328.1999988555908,
+            "y": 203.21249389648438
+          },
+          {
+            "x": 329.1999988555908,
+            "y": 203.21249389648438
+          },
+          {
+            "x": 330.1999988555908,
+            "y": 197.21249389648438
+          },
+          {
+            "x": 330.1999988555908,
+            "y": 187.21249389648438
+          },
+          {
+            "x": 330.1999988555908,
+            "y": 180.21249389648438
+          },
+          {
+            "x": 328.1999988555908,
+            "y": 169.21249389648438
+          },
+          {
+            "x": 327.1999988555908,
+            "y": 163.21249389648438
+          },
+          {
+            "x": 324.1999988555908,
+            "y": 159.21249389648438
+          },
+          {
+            "x": 323.1999988555908,
+            "y": 158.21249389648438
+          },
+          {
+            "x": 323.1999988555908,
+            "y": 161.21249389648438
+          },
+          {
+            "x": 328.1999988555908,
+            "y": 169.21249389648438
+          }
+        ],
+        "authorId": "usr-1792214688940-g7yd1n"
+      }
+    ],
+    "photos": [
+      {
+        "id": "sample-p1",
+        "senderId": "system",
+        "senderName": "Love Birds",
+        "url": "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80",
+        "caption": "Counting down the sunsets until we hold hands again 🌅",
+        "albumName": "Our Memories",
+        "location": "Sunset Beach",
+        "date": "2026-10-17",
+        "timestamp": 1792041890340,
+        "likes": []
+      },
+      {
+        "id": "sample-p2",
+        "senderId": "system",
+        "senderName": "Love Birds",
+        "url": "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80",
+        "caption": "Our cozy coffee date over video call ☕❤️",
+        "albumName": "Daily Love",
+        "location": "Virtual Date",
+        "date": "2026-10-17",
+        "timestamp": 1792128290340,
+        "likes": []
+      }
+    ],
+    "events": [
+      {
+        "id": "sample-ev1",
+        "title": "✈️ Airport Reunion Hug!",
+        "date": "2026-10-31",
+        "time": "14:30",
+        "category": "visit",
+        "notes": "Terminal 3 arrivals! Bringing your favorite chocolate 🍫",
+        "createdBy": "system",
+        "timestamp": 1792214690340
+      },
+      {
+        "id": "sample-ev2",
+        "title": "🥂 Weekend Candlelight FaceTime Date",
+        "date": "2026-10-20",
+        "time": "20:00",
+        "category": "date",
+        "notes": "We both cook pasta and dress up nicely 🍝✨",
+        "createdBy": "system",
+        "timestamp": 1792214690340
+      }
+    ],
+    "letters": [
+      {
+        "id": "sample-let1",
+        "title": "A Little Whisper",
+        "openWhen": "Open when distance feels too hard 🌧️",
+        "content": "Hey my love,\n\nI know miles feel heavy today, but remember that every sunrise brings us one day closer. No amount of distance can diminish how deeply you are loved. Close your eyes, take a deep breath, and feel my arms around you.\n\nForever yours 💕",
+        "authorId": "system",
+        "authorName": "Your Love",
+        "sealedDate": "2026-10-17",
+        "isOpened": false
+      }
+    ],
+    "notes": [
+      {
+        "id": "sample-n1",
+        "text": "Drink water and remember I adore you! 💧🥰",
+        "color": "#FEF08A",
+        "authorId": "system",
+        "authorName": "Sweetheart",
+        "timestamp": 1792214690340
+      }
+    ],
+    "coupleMeta": {
+      "nextMeetupDate": "2026-10-31",
+      "nextMeetupTitle": "Airport Reunion Hug! ✈️",
+      "anniversaryDate": "2025-10-17",
+      "user1Location": "New York, USA",
+      "user1Timezone": "America/New_York",
+      "user2Location": "Paris, France",
+      "user2Timezone": "Europe/Paris"
+    }
+  }
+}

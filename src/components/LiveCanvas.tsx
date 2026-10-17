@@ -227,16 +227,18 @@ export const LiveCanvas: React.FC<LiveCanvasProps> = ({
     onSendStroke(stampStroke);
   };
 
-  // Pointer coordinate calculation relative to canvas
+  // Pointer coordinate calculation relative to canvas (with DPI scaling)
   const getCoordinates = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const scaleX = rect.width ? canvas.width / rect.width : 1;
+    const scaleY = rect.height ? canvas.height / rect.height : 1;
     return {
-      x: Math.max(0, Math.min(canvas.width, clientX - rect.left)),
-      y: Math.max(0, Math.min(canvas.height, clientY - rect.top)),
+      x: Math.max(0, Math.min(canvas.width, (clientX - rect.left) * scaleX)),
+      y: Math.max(0, Math.min(canvas.height, (clientY - rect.top) * scaleY)),
     };
   };
 

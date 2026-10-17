@@ -80,6 +80,7 @@ export default function App() {
             currentUser={currentUser}
             partnerUser={partnerUser}
             partnerTyping={partnerTyping}
+            currentCode={currentCode}
             onSendMessage={sendMessage}
             onToggleReaction={toggleMessageReaction}
             onSendPoke={sendPoke}

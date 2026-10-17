@@ -136,47 +136,81 @@ function loadData() {
   }
 }
 
-// Persist data to disk
-let saveTimeout: NodeJS.Timeout | null = null;
-function scheduleSave() {
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    try {
-      const obj: Record<string, RoomData> = {};
-      rooms.forEach((val, key) => {
-        // limit message history to 200 items and canvas strokes to 300 to avoid bloat
-        obj[key] = {
-          ...val,
-          messages: val.messages.slice(-200),
-          canvasStrokes: val.canvasStrokes.slice(-300),
-        };
-      });
-      fs.writeFileSync(DATA_FILE, JSON.stringify(obj, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('Error saving data:', err);
-    }
-  }, 1000);
+// Persist data to disk immediately
+function saveDataNow() {
+  try {
+    const obj: Record<string, RoomData> = {};
+    rooms.forEach((val, key) => {
+      obj[key] = {
+        ...val,
+        messages: val.messages.slice(-200),
+        canvasStrokes: val.canvasStrokes.slice(-300),
+      };
+    });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(obj, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error saving data:', err);
+  }
 }
+
+const scheduleSave = saveDataNow;
 
 loadData();
 
-// Helper to normalize room code for foolproof matching across spaces, dashes, cases
+// Helper to extract clean code from URLs, queries, or raw strings
+function extractCleanCode(rawCode: string): string {
+  if (!rawCode) return '';
+  let str = String(rawCode).trim();
+
+  // If query string or URL parameter like ?nest=BIRD-1234 or &code=BIRD-1234
+  if (str.includes('nest=') || str.includes('code=')) {
+    const match = str.match(/[?&](?:nest|code)=([A-Za-z0-9_-]+)/i);
+    if (match) return match[1].trim().toUpperCase();
+  }
+
+  // If full URL e.g. https://domain.com/nest/BIRD-1234
+  if (str.startsWith('http://') || str.startsWith('https://')) {
+    try {
+      const u = new URL(str);
+      const nestParam = u.searchParams.get('nest') || u.searchParams.get('code');
+      if (nestParam) return nestParam.trim().toUpperCase();
+      const parts = u.pathname.split('/').filter(Boolean);
+      if (parts.length > 0) {
+        const last = parts[parts.length - 1];
+        if (/^[A-Za-z0-9_-]+$/.test(last)) return last.trim().toUpperCase();
+      }
+    } catch {}
+  }
+
+  // If "Nest: BIRD-1234" or "Code: BIRD-1234"
+  const prefixMatch = str.match(/(?:nest|code)[:\s]+([A-Za-z0-9_-]+)/i);
+  if (prefixMatch) return prefixMatch[1].trim().toUpperCase();
+
+  // Replace spaces with hyphens if like "DOVE 6264"
+  if (/^[A-Za-z]+\s+\d+$/.test(str)) {
+    str = str.replace(/\s+/, '-');
+  }
+
+  return str.toUpperCase();
+}
+
 function normalizeRoomKey(rawCode: string): string {
   if (!rawCode) return '';
-  return rawCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  return extractCleanCode(rawCode).replace(/[^A-Za-z0-9]/g, '');
 }
 
 function findRoom(inputCode: string): RoomData | null {
   if (!inputCode) return null;
-  const trimmed = inputCode.trim().toUpperCase();
+  const cleanCode = extractCleanCode(inputCode);
+  if (!cleanCode) return null;
 
   // 1. Direct match
-  if (rooms.has(trimmed)) {
-    return rooms.get(trimmed)!;
+  if (rooms.has(cleanCode)) {
+    return rooms.get(cleanCode)!;
   }
 
   // 2. Normalized match (ignores hyphens, spaces, etc.)
-  const cleanInput = normalizeRoomKey(inputCode);
+  const cleanInput = normalizeRoomKey(cleanCode);
   if (!cleanInput) return null;
 
   for (const [code, room] of rooms.entries()) {
@@ -185,12 +219,21 @@ function findRoom(inputCode: string): RoomData | null {
     }
   }
 
-  // 3. Suffix / number match (e.g. if partner enters just '8924' instead of 'BIRD-8924')
-  if (/^\d{3,6}$/.test(cleanInput)) {
+  // 3. Number / suffix match (e.g. if partner enters '6264' or 'DOVE6264')
+  const numMatch = cleanInput.match(/\d{3,6}/);
+  if (numMatch) {
+    const digits = numMatch[0];
     for (const [code, room] of rooms.entries()) {
-      if (normalizeRoomKey(code).endsWith(cleanInput) || code.endsWith(`-${cleanInput}`)) {
+      if (code.includes(digits) || normalizeRoomKey(code).includes(digits)) {
         return room;
       }
+    }
+  }
+
+  // 4. Prefix match if user types partial code like 'DOVE'
+  for (const [code, room] of rooms.entries()) {
+    if (code.startsWith(cleanCode) || cleanCode.startsWith(code)) {
+      return room;
     }
   }
 
@@ -202,7 +245,7 @@ function getOrCreateRoom(rawCode: string): RoomData {
   const existing = findRoom(rawCode);
   if (existing) return existing;
 
-  const code = rawCode.trim().toUpperCase();
+  const code = extractCleanCode(rawCode) || 'LOVE-BIRDS';
   const newRoom: RoomData = {
     code,
     createdAt: Date.now(),
@@ -352,27 +395,52 @@ app.get('/api/room/:code', (req, res) => {
   res.json(room);
 });
 
-// Dual-sync polling endpoint with live presence calculation
+// Dual-sync polling endpoint with live presence calculation and auto-registration
 app.get('/api/room/:code/sync', (req, res) => {
   const userId = req.query.userId as string | undefined;
-  const userName = req.query.userName as string | undefined;
+  const userName = (req.query.userName as string | undefined)?.trim();
+  const userAvatar = (req.query.userAvatar as string | undefined) || '🕊️';
+  const userCity = req.query.userCity as string | undefined;
+  const userTimezone = req.query.userTimezone as string | undefined;
+
   const room = getOrCreateRoom(req.params.code);
   const now = Date.now();
 
-  if (userId || userName) {
-    let user = room.users.find(
-      (u) => (userId && u.id === userId) || (userName && u.name.toLowerCase() === userName.toLowerCase())
-    );
+  if (userId) {
+    let user = room.users.find((u) => u.id === userId);
     if (user) {
       user.isOnline = true;
       user.lastSeen = now;
-      if (userId) user.id = userId;
+      if (userName) user.name = userName;
+      if (userAvatar) user.avatar = userAvatar;
+      if (userCity) user.city = userCity;
+      if (userTimezone) user.timezone = userTimezone;
+    } else {
+      // Auto-register user in room if not present
+      const newUser: UserProfile = {
+        id: userId,
+        name: userName || (room.users.length === 0 ? 'Love Bird 1' : 'Love Bird 2'),
+        avatar: userAvatar,
+        city: userCity,
+        timezone: userTimezone,
+        isOnline: true,
+        lastSeen: now,
+      };
+
+      if (room.users.length >= 2) {
+        // Replace oldest inactive user
+        room.users.sort((a, b) => (a.lastSeen || 0) - (b.lastSeen || 0));
+        room.users[0] = newUser;
+      } else {
+        room.users.push(newUser);
+      }
+      scheduleSave();
     }
   }
 
-  // Update presence status dynamically: online if active in last 8s
+  // Update presence status dynamically: online if active in last 25s
   room.users.forEach((u) => {
-    u.isOnline = now - (u.lastSeen || 0) < 8000;
+    u.isOnline = now - (u.lastSeen || 0) < 25000;
   });
 
   res.json(room);
@@ -384,9 +452,7 @@ app.post('/api/room/:code/join', (req, res) => {
   if (!user || !user.id) return res.status(400).json({ error: 'Missing user' });
 
   const room = getOrCreateRoom(req.params.code);
-  const existingIdx = room.users.findIndex(
-    (u) => u.id === user.id || u.name.trim().toLowerCase() === user.name.trim().toLowerCase()
-  );
+  const existingIdx = room.users.findIndex((u) => u.id === user.id);
   const updatedUser: UserProfile = { ...user, isOnline: true, lastSeen: Date.now() };
 
   if (existingIdx >= 0) {
@@ -413,27 +479,44 @@ app.post('/api/room/:code/join', (req, res) => {
   res.json({ success: true, room, code: room.code });
 });
 
+// REST endpoint: List active nests for 1-click easy pairing
+app.get('/api/rooms/active', (req, res) => {
+  const activeList: Array<{ code: string; partnerName: string; partnerAvatar: string; usersCount: number; lastActive: number }> = [];
+  rooms.forEach((r) => {
+    const partner = r.users.find((u) => u.isOnline) || r.users[0];
+    const lastActive = Math.max(...r.users.map((u) => u.lastSeen || 0), r.createdAt || 0);
+    activeList.push({
+      code: r.code,
+      partnerName: partner?.name || 'Partner',
+      partnerAvatar: partner?.avatar || '🕊️',
+      usersCount: r.users.length,
+      lastActive,
+    });
+  });
+  // Sort by most recently active
+  activeList.sort((a, b) => b.lastActive - a.lastActive);
+  res.json({ nests: activeList });
+});
+
 // REST endpoint: Post Chat Message
 app.post('/api/room/:code/message', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
+  const room = getOrCreateRoom(req.params.code);
   const message: ChatMessage = req.body.message;
   if (!message || !message.id) return res.status(400).json({ error: 'Invalid message' });
 
-  const room = getOrCreateRoom(code);
   if (!room.messages.some((m) => m.id === message.id)) {
     room.messages.push(message);
-    scheduleSave();
+    saveDataNow();
   }
 
-  broadcastToAllInRoom(code, { type: 'new_message', message });
+  broadcastToAllInRoom(room.code, { type: 'new_message', message });
   res.json({ success: true, message });
 });
 
 // REST endpoint: Reaction
 app.post('/api/room/:code/reaction', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const { messageId, emoji, userId } = req.body;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   const target = room.messages.find((m) => m.id === messageId);
 
   if (target) {
@@ -447,8 +530,8 @@ app.post('/api/room/:code/reaction', (req, res) => {
     } else {
       target.reactions[emoji] = [...list, userId];
     }
-    scheduleSave();
-    broadcastToAllInRoom(code, { type: 'message_updated', message: target });
+    saveDataNow();
+    broadcastToAllInRoom(room.code, { type: 'message_updated', message: target });
   }
 
   res.json({ success: true, target });
@@ -456,37 +539,34 @@ app.post('/api/room/:code/reaction', (req, res) => {
 
 // REST endpoint: Canvas stroke
 app.post('/api/room/:code/stroke', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const stroke: CanvasStroke = req.body.stroke;
   if (!stroke) return res.status(400).json({ error: 'Invalid stroke' });
 
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.canvasStrokes.push(stroke);
   if (room.canvasStrokes.length > 500) {
     room.canvasStrokes = room.canvasStrokes.slice(-300);
   }
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'canvas_stroke', stroke });
+  broadcastToAllInRoom(room.code, { type: 'canvas_stroke', stroke });
   res.json({ success: true });
 });
 
 // REST endpoint: Clear canvas
 app.post('/api/room/:code/clear-canvas', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.canvasStrokes = [];
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'canvas_cleared' });
+  broadcastToAllInRoom(room.code, { type: 'canvas_cleared' });
   res.json({ success: true });
 });
 
 // REST endpoint: Poke / Kiss / Hug
 app.post('/api/room/:code/poke', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const { pokeType, senderName, senderId } = req.body;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
 
   const pokeMsg: ChatMessage = {
     id: `poke-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -497,9 +577,9 @@ app.post('/api/room/:code/poke', (req, res) => {
     timestamp: Date.now(),
   };
   room.messages.push(pokeMsg);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, {
+  broadcastToAllInRoom(room.code, {
     type: 'poke_received',
     pokeType,
     senderName,
@@ -512,23 +592,21 @@ app.post('/api/room/:code/poke', (req, res) => {
 
 // REST endpoint: Add Photo
 app.post('/api/room/:code/photo', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const photo: PhotoItem = req.body.photo;
   if (!photo) return res.status(400).json({ error: 'Missing photo' });
 
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.photos.unshift(photo);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'photo_added', photo });
+  broadcastToAllInRoom(room.code, { type: 'photo_added', photo });
   res.json({ success: true, photo });
 });
 
 // REST endpoint: Photo Like
 app.post('/api/room/:code/photo-like', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const { photoId, userId } = req.body;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   const photo = room.photos.find((p) => p.id === photoId);
 
   if (photo) {
@@ -537,8 +615,8 @@ app.post('/api/room/:code/photo-like', (req, res) => {
     } else {
       photo.likes.push(userId);
     }
-    scheduleSave();
-    broadcastToAllInRoom(code, { type: 'photo_updated', photo });
+    saveDataNow();
+    broadcastToAllInRoom(room.code, { type: 'photo_updated', photo });
   }
 
   res.json({ success: true, photo });
@@ -546,68 +624,63 @@ app.post('/api/room/:code/photo-like', (req, res) => {
 
 // REST endpoint: Photo Delete
 app.post('/api/room/:code/photo-delete', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const { photoId } = req.body;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.photos = room.photos.filter((p) => p.id !== photoId);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'photo_deleted', photoId });
+  broadcastToAllInRoom(room.code, { type: 'photo_deleted', photoId });
   res.json({ success: true });
 });
 
 // REST endpoint: Add Calendar Event
 app.post('/api/room/:code/event', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const event: CalendarEvent = req.body.event;
   if (!event) return res.status(400).json({ error: 'Missing event' });
 
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.events.push(event);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'event_added', event });
+  broadcastToAllInRoom(room.code, { type: 'event_added', event });
   res.json({ success: true, event });
 });
 
 // REST endpoint: Delete Calendar Event
 app.post('/api/room/:code/event-delete', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const { eventId } = req.body;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.events = room.events.filter((e) => e.id !== eventId);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'event_deleted', eventId });
+  broadcastToAllInRoom(room.code, { type: 'event_deleted', eventId });
   res.json({ success: true });
 });
 
 // REST endpoint: Add Love Letter
 app.post('/api/room/:code/letter', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const letter: LoveLetter = req.body.letter;
   if (!letter) return res.status(400).json({ error: 'Missing letter' });
 
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.letters.push(letter);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'letter_added', letter });
+  broadcastToAllInRoom(room.code, { type: 'letter_added', letter });
   res.json({ success: true, letter });
 });
 
 // REST endpoint: Open Love Letter
 app.post('/api/room/:code/letter-open', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const { letterId } = req.body;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   const letter = room.letters.find((l) => l.id === letterId);
 
   if (letter && !letter.isOpened) {
     letter.isOpened = true;
     letter.openedAt = new Date().toISOString();
-    scheduleSave();
-    broadcastToAllInRoom(code, { type: 'letter_opened', letter });
+    saveDataNow();
+    broadcastToAllInRoom(room.code, { type: 'letter_opened', letter });
   }
 
   res.json({ success: true, letter });
@@ -615,39 +688,36 @@ app.post('/api/room/:code/letter-open', (req, res) => {
 
 // REST endpoint: Add Note
 app.post('/api/room/:code/note', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const note: StickyNote = req.body.note;
   if (!note) return res.status(400).json({ error: 'Missing note' });
 
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.notes.push(note);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'note_added', note });
+  broadcastToAllInRoom(room.code, { type: 'note_added', note });
   res.json({ success: true, note });
 });
 
 // REST endpoint: Delete Note
 app.post('/api/room/:code/note-delete', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const { noteId } = req.body;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.notes = room.notes.filter((n) => n.id !== noteId);
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'note_deleted', noteId });
+  broadcastToAllInRoom(room.code, { type: 'note_deleted', noteId });
   res.json({ success: true });
 });
 
 // REST endpoint: Update Couple Meta (Countdown, Timezones)
 app.post('/api/room/:code/meta', (req, res) => {
-  const code = req.params.code.trim().toUpperCase();
   const meta: Partial<CoupleMeta> = req.body.meta;
-  const room = getOrCreateRoom(code);
+  const room = getOrCreateRoom(req.params.code);
   room.coupleMeta = { ...room.coupleMeta, ...meta };
-  scheduleSave();
+  saveDataNow();
 
-  broadcastToAllInRoom(code, { type: 'meta_updated', coupleMeta: room.coupleMeta });
+  broadcastToAllInRoom(room.code, { type: 'meta_updated', coupleMeta: room.coupleMeta });
   res.json({ success: true, coupleMeta: room.coupleMeta });
 });
 
